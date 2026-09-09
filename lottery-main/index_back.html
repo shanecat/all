@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>泰國文創抽獎 - 十組加權專業版</title>
+    <style>
+        :root {
+            --primary-gold: #D4AF37;
+            --thai-red: #C8102E;
+            --dark-blue: #00247D;
+            --bg-color: #fcfaf2;
+        }
+
+        body {
+            font-family: "SF Pro Display", "Microsoft JhengHei", sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 850px;
+            width: 100%;
+            background: white;
+            padding: 40px;
+            border-radius: 25px;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.1);
+            border-top: 12px solid var(--primary-gold);
+            text-align: center;
+        }
+
+        h1 { color: var(--thai-red); font-size: 2.2rem; margin-bottom: 5px; letter-spacing: 2px; }
+        .info { color: #888; margin-bottom: 25px; font-size: 0.95rem; }
+
+        /* 數字顯示區 */
+        .display-area {
+            background: #1a1a1a;
+            height: 160px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 6rem;
+            font-weight: 800;
+            color: #fff;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            border: 6px solid var(--primary-gold);
+            text-shadow: 0 0 25px rgba(212, 175, 55, 0.6);
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .active { animation: blink 0.1s infinite; color: var(--primary-gold); }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+
+        /* 表格樣式 */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 20px 10px; border-bottom: 1px solid #eee; text-align: left; }
+        th { color: var(--primary-gold); font-size: 1.1rem; border-bottom: 2px solid #eee; }
+
+        .btn-draw {
+            padding: 12px 25px;
+            background: var(--thai-red);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+            box-shadow: 0 4px 0 #8a0b1f;
+        }
+
+        .btn-draw:hover { background: #a00d25; transform: translateY(-2px); }
+        .btn-draw:active { transform: translateY(2px); box-shadow: none; }
+        .btn-draw:disabled { background: #ccc; cursor: not-allowed; box-shadow: none; transform: none; }
+
+        /* 得獎標籤 */
+        .winner-tag {
+            display: inline-flex;
+            align-items: center;
+            background: var(--dark-blue);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 10px;
+            margin: 5px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 4px 10px rgba(0, 36, 125, 0.2);
+        }
+
+        .delete-btn {
+            margin-left: 12px;
+            color: #ffaaaa;
+            cursor: pointer;
+            font-size: 1rem;
+            width: 22px;
+            height: 22px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(255,255,255,0.15);
+            border-radius: 50%;
+            transition: 0.2s;
+        }
+        .delete-btn:hover { background: #ff4444; color: white; }
+
+        @keyframes popIn { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🇹🇭 泰國文創抽獎活動 🐘</h1>
+    <div class="info">編號：001 - 500 | 狀態：嚴格不重複抽獎 | 已設置 10 組加權號碼</div>
+
+    <div id="display" class="display-area">000</div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 35%;">獎項項目</th>
+                <th style="width: 45%;">得獎編號</th>
+                <th style="width: 20%;">操作</th>
+            </tr>
+        </thead>
+        <tbody id="prizeTableBody"></tbody>
+    </table>
+</div>
+
+<script>
+    /* ==========================================
+       密技設定區：請在此修改 10 組號碼與機率
+       num: 號碼 (必須是三位數格式，如 "005")
+       chance: 機率 (1-100 之間)
+       ========================================== */
+    const LUCKY_POOL = [
+        { num: "234", chance: 70 },
+        { num: "129", chance: 70 },
+        { num: "313", chance: 70 },
+        { num: "444", chance: 70 },
+        { num: "168", chance: 70 },
+        { num: "156", chance: 70 },
+        { num: "024", chance: 70 },
+        { num: "173", chance: 70 },
+        { num: "766", chance: 70 },
+        { num: "288", chance: 70 },
+        { num: "128", chance: 70 },
+        { num: "022", chance: 70 },
+        { num: "288", chance: 70 },
+        { num: "264", chance: 70 },
+        { num: "159", chance: 70 }
+    ];
+    /* ========================================== */
+
+    const prizeConfig = [
+        { id: 'p1', name: "一獎：福貓 T-shirt", total: 1, winners: [] },
+        { id: 'p2', name: "二獎：大象刺繡肩背包", total: 1, winners: [] },
+        { id: 'p3', name: "三獎：大象彩色掛飾", total: 1, winners: [] },
+        { id: 'p4', name: "四獎：質感護照套", total: 1, winners: [] },
+        { id: 'p5', name: "五獎：大象零錢包", total: 4, winners: [] }
+    ];
+
+    let usedNumbers = new Set(); 
+    const display = document.getElementById('display');
+
+    function renderTable() {
+        const tbody = document.getElementById('prizeTableBody');
+        tbody.innerHTML = prizeConfig.map(p => `
+            <tr>
+                <td><strong>${p.name}</strong><br><small style="color:#888">名額：${p.total}</small></td>
+                <td>
+                    ${p.winners.map(num => `
+                        <span class="winner-tag">
+                            ${num}
+                            <span class="delete-btn" onclick="removeWinner('${p.id}', '${num}')" title="刪除並重新抽獎">✕</span>
+                        </span>
+                    `).join('')}
+                </td>
+                <td>
+                    <button class="btn-draw" id="btn-${p.id}" 
+                            onclick="handleDraw('${p.id}')" 
+                            ${p.winners.length >= p.total ? 'disabled' : ''}>
+                        ${p.winners.length >= p.total ? '已滿額' : '開始抽取'}
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function handleDraw(prizeId) {
+        if (usedNumbers.size >= 500) {
+            alert("500個號碼已全部抽完！");
+            return;
+        }
+
+        document.querySelectorAll('.btn-draw').forEach(b => b.disabled = true);
+        display.classList.add('active');
+
+        let counter = 0;
+        const interval = setInterval(() => {
+            display.innerText = Math.floor(Math.random() * 500 + 1).toString().padStart(3, '0');
+            counter++;
+            if (counter > 30) {
+                clearInterval(interval);
+                executeFinalDraw(prizeConfig.find(p => p.id === prizeId));
+            }
+        }, 40);
+    }
+
+    function executeFinalDraw(prize) {
+        let luckyNumber = null;
+        let randomRoll = Math.floor(Math.random() * 100) + 1;
+
+        // 核心邏輯：先篩選出還沒中過獎的加權號碼
+        // 並根據 randomRoll 決定是否命中
+        for (let item of LUCKY_POOL) {
+            if (randomRoll <= item.chance && !usedNumbers.has(item.num)) {
+                luckyNumber = item.num;
+                break; 
+            }
+        }
+
+        // 如果沒中加權，或者加權號碼早就中過了，則從 1-500 剩餘號碼中隨機抽
+        if (!luckyNumber) {
+            do {
+                luckyNumber = Math.floor(Math.random() * 500 + 1).toString().padStart(3, '0');
+            } while (usedNumbers.has(luckyNumber)); 
+        }
+
+        usedNumbers.add(luckyNumber);
+        prize.winners.push(luckyNumber);
+        
+        display.innerText = luckyNumber;
+        display.classList.remove('active');
+        renderTable(); 
+    }
+
+    function removeWinner(prizeId, number) {
+        if (!confirm(`確定要取消編號 ${number} 並釋放名額回抽獎池嗎？`)) return;
+        
+        const prize = prizeConfig.find(p => p.id === prizeId);
+        prize.winners = prize.winners.filter(n => n !== number);
+        usedNumbers.delete(number); 
+        
+        renderTable();
+        display.innerText = "READY";
+    }
+
+    renderTable();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>臉書留言數字萃取與排序工具</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #f9f9f9;
+        }
+        h2 { color: #333; }
+        
+        .control-panel {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .control-panel input[type="number"] {
+            width: 120px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            resize: vertical;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin: 15px 0;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: #45a049; }
+        
+        /* 缺號顯示區塊 */
+        #missingNumbersBox {
+            display: none;
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #f6e58d;
+            background-color: #fffde7;
+            border-radius: 5px;
+        }
+        #missingNumbersBox h3 {
+            margin-top: 0;
+            color: #827717;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        #missingNumbersList {
+            margin: 0;
+            color: #333;
+            line-height: 1.6;
+            word-wrap: break-word;
+            font-weight: bold;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            background-color: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th { background-color: #f2f2f2; font-weight: bold; }
+        
+        .num-highlight { font-weight: bold; font-size: 1.1em; color: #333;}
+        .comment-text { color: #666; font-size: 0.9em; }
+        .user-count { color: #e67e22; font-size: 0.85em; font-weight: bold; margin-left: 6px; }
+        
+        /* 狀態標籤樣式 */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: bold;
+        }
+        .status-ok { background-color: #dff0d8; color: #3c763d; }
+        .status-dup { background-color: #f2dede; color: #a94442; }
+        
+        /* 重複留言的整行樣式 */
+        .duplicate-row { background-color: #fff5f5; }
+        .duplicate-row .num-highlight { color: #a94442; text-decoration: line-through; }
+        .duplicate-row .comment-text { color: #999; }
+    </style>
+</head>
+<body>
+
+    <h2>粉絲專頁留言數字擷取與排序工具</h2>
+    
+    <div class="control-panel">
+        <label style="font-weight:bold; display:block; margin-bottom:8px;">1. 查詢空號區間 (選填)：</label>
+        <input type="number" id="minNum" placeholder="起始號碼 (如 1)">
+        <span style="font-weight:bold; margin-right:10px;">~</span>
+        <input type="number" id="maxNum" placeholder="結束號碼 (如 300)">
+        <span style="color:#666; font-size:0.9em;">若不需查空號可留白</span>
+    </div>
+
+    <p style="margin-bottom:8px; font-weight:bold;">2. 請在此貼上臉書留言：</p>
+    <textarea id="inputArea" placeholder="反白複製臉書留言後貼上..."></textarea>
+    
+    <button onclick="processText()">轉換並分析留言</button>
+
+    <!-- 尚未使用的號碼區塊 -->
+    <div id="missingNumbersBox">
+        <h3>🔍 尚未被使用的號碼：</h3>
+        <p id="missingNumbersList"></p>
+    </div>
+
+    <table id="resultTable" style="display: none;">
+        <thead>
+            <tr>
+                <th style="width: 15%;">狀態</th>
+                <th style="width: 30%;">留言者</th>
+                <th style="width: 20%;">擷取數字</th>
+                <th style="width: 35%;">完整留言</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- 轉換後的資料會顯示在這裡 -->
+        </tbody>
+    </table>
+
+    <script>
+        function processText() {
+            const text = document.getElementById('inputArea').value;
+            const lines = text.split('\n')
+                              .map(line => line.replace(/\u00A0/g, ' ').trim())
+                              .filter(line => line !== '');
+                              
+            const tbody = document.querySelector('#resultTable tbody');
+            tbody.innerHTML = ''; 
+            
+            let rawResults = [];
+            
+            // 步驟一：依序抓取所有留言
+            for (let i = 0; i < lines.length; i++) {
+                let name = '';
+                let comment = '';
+                
+                if (lines[i] === '·' && i > 0 && i < lines.length - 1) {
+                    name = lines[i-1];
+                    comment = lines[i+1];
+                } 
+                else if (lines[i].includes(' · ')) {
+                    name = lines[i].split(' · ')[0];
+                    for (let j = i + 1; j < lines.length; j++) {
+                        if (['讚', '回覆', '分享', '檢舉', '隱藏', '編輯', '已編輯'].includes(lines[j])) continue;
+                        if (lines[j].includes(' · ') || lines[j] === '·') break; 
+                        
+                        if (/\d/.test(lines[j])) {
+                            comment = lines[j];
+                            break;
+                        }
+                    }
+                }
+
+                if (name && comment) {
+                    const nums = comment.match(/\d+/g);
+                    if (nums) {
+                        const numStr = nums.join('');
+                        rawResults.push({name, numStr, comment});
+                    }
+                }
+            }
+
+            const uniqueResults = [...new Set(rawResults.map(r => JSON.stringify(r)))].map(r => JSON.parse(r));
+
+            // 步驟二：統計每個人的總留言次數
+            let userCounts = {};
+            uniqueResults.forEach(r => {
+                userCounts[r.name] = (userCounts[r.name] || 0) + 1;
+            });
+
+            // 步驟三：判斷重複與建立排序物件，並記錄所有被用過的有效數字
+            let seenNumbers = new Set();
+            let processedResults = [];
+            
+            uniqueResults.forEach((r, index) => {
+                let parsedNum = parseInt(r.numStr, 10);
+                let isDup = false;
+                
+                if (seenNumbers.has(parsedNum)) {
+                    isDup = true;
+                } else {
+                    seenNumbers.add(parsedNum);
+                }
+                
+                processedResults.push({
+                    name: r.name,
+                    numStr: r.numStr,
+                    comment: r.comment,
+                    parsedNum: parsedNum,
+                    originalIndex: index,
+                    isDuplicate: isDup,
+                    totalComments: userCounts[r.name]
+                });
+            });
+
+            // 步驟四：處理「尚未使用的空號」邏輯
+            const minInput = document.getElementById('minNum').value;
+            const maxInput = document.getElementById('maxNum').value;
+            const missingBox = document.getElementById('missingNumbersBox');
+            const missingList = document.getElementById('missingNumbersList');
+
+            if (minInput !== '' && maxInput !== '') {
+                const min = parseInt(minInput, 10);
+                const max = parseInt(maxInput, 10);
+                let missing = [];
+
+                if (!isNaN(min) && !isNaN(max) && min <= max) {
+                    for (let k = min; k <= max; k++) {
+                        if (!seenNumbers.has(k)) {
+                            missing.push(k);
+                        }
+                    }
+
+                    if (missing.length > 0) {
+                        missingList.textContent = missing.join(', ');
+                    } else {
+                        missingList.textContent = '太棒了！這個區間內的號碼皆已被使用完畢。';
+                        missingList.style.color = '#3c763d';
+                    }
+                    missingBox.style.display = 'block';
+                } else {
+                    missingBox.style.display = 'none';
+                }
+            } else {
+                missingBox.style.display = 'none';
+            }
+
+            // 步驟五：進行排序 (先依據數字大小，若數字相同則依原本留言先後)
+            processedResults.sort((a, b) => {
+                if (a.parsedNum !== b.parsedNum) {
+                    return a.parsedNum - b.parsedNum;
+                }
+                return a.originalIndex - b.originalIndex;
+            });
+
+            // 步驟六：輸出到表格
+            if (processedResults.length > 0) {
+                processedResults.forEach(r => {
+                    const tr = document.createElement('tr');
+                    
+                    if (r.isDuplicate) {
+                        tr.classList.add('duplicate-row');
+                    }
+                    
+                    const statusHtml = r.isDuplicate 
+                        ? '<span class="status-badge status-dup">重複 (無效)</span>' 
+                        : '<span class="status-badge status-ok">有效</span>';
+                    
+                    let nameHtml = r.name;
+                    if (r.totalComments > 1) {
+                        nameHtml += `<span class="user-count">(共 ${r.totalComments} 則)</span>`;
+                    }
+                    
+                    tr.innerHTML = `
+                        <td>${statusHtml}</td>
+                        <td>${nameHtml}</td>
+                        <td class="num-highlight">${r.numStr}</td>
+                        <td class="comment-text">${r.comment}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                document.getElementById('resultTable').style.display = 'table';
+            } else {
+                document.getElementById('resultTable').style.display = 'none';
+                alert('沒有找到符合格式的數字留言，請確認複製的內容。');
+            }
+        }
+    </script>
+</body>
+</html>
