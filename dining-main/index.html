@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>聚餐費用規劃</title>
+  <style>
+    :root { color-scheme: light; --ink:#172033; --muted:#65708a; --line:#dce3ee; --blue:#2463eb; --pale:#f5f8ff; --red:#c0362c; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-width:320px; background:linear-gradient(145deg,#eef4ff,#fafbff 55%,#f2f7f5); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","Microsoft JhengHei",sans-serif; }
+    main { width:min(100% - 32px,780px); margin:clamp(24px,7vw,72px) auto; }
+    .card { background:rgba(255,255,255,.94); border:1px solid rgba(220,227,238,.9); border-radius:22px; box-shadow:0 15px 45px rgba(40,61,103,.12); overflow:hidden; }
+    header { padding:clamp(24px,5vw,42px) clamp(22px,6vw,54px) 28px; background:var(--pale); border-bottom:1px solid var(--line); }
+    h1 { margin:0 0 8px; font-size:clamp(1.6rem,5vw,2.2rem); letter-spacing:.03em; }
+    header p { margin:0; color:var(--muted); line-height:1.7; }
+    .content { padding:clamp(22px,5vw,42px) clamp(18px,6vw,54px) clamp(28px,5vw,42px); }
+    .labels, .expense-row { display:grid; grid-template-columns:minmax(0,1fr) 124px 145px 44px; gap:12px; align-items:center; }
+    .labels { padding:0 0 8px; color:var(--muted); font-size:.82rem; }
+    #expense-list { display:grid; gap:10px; }
+    .expense-row { padding:10px 0; border-bottom:1px solid #eef1f6; }
+    input { width:100%; min-height:46px; border:1px solid #cbd5e1; border-radius:10px; padding:0 13px; color:var(--ink); font:inherit; font-size:1rem; outline:none; transition:border-color .15s,box-shadow .15s; }
+    input:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(36,99,235,.14); }
+    .amount { min-height:46px; display:flex; align-items:center; justify-content:flex-end; padding:0 4px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .settings { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px; padding:18px; margin-bottom:24px; border:1px solid var(--line); border-radius:14px; background:var(--pale); }
+    .setting-label { display:grid; gap:7px; color:var(--muted); font-size:.86rem; }
+    button { font:inherit; cursor:pointer; border:0; }
+    .delete { width:42px; height:42px; border-radius:10px; background:#fff1f0; color:var(--red); font-size:1.2rem; }
+    .delete:hover { background:#ffe1df; }
+    .add { margin-top:20px; min-height:46px; padding:0 17px; border-radius:10px; background:#e7efff; color:#174bbd; font-weight:700; }
+    .add:hover { background:#d8e5ff; }
+    .summary { margin-top:28px; padding:20px; border-radius:14px; background:#172c55; color:#fff; }
+    .summary h2 { margin:0 0 14px; font-size:1rem; }
+    .subsidy-input { display:grid; grid-template-columns:1fr minmax(104px,150px); gap:12px; align-items:center; padding-bottom:17px; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,.25); }
+    .subsidy-input label { color:#dbe7ff; font-size:.92rem; }
+    .subsidy-input small { display:block; margin-top:3px; color:#aebfdd; }
+    .subsidy-input input { min-height:42px; border-color:transparent; background:#fff; text-align:right; }
+    .summary-line { display:flex; justify-content:space-between; gap:20px; padding:8px 0; color:#dbe7ff; }
+    .summary-line strong { color:#fff; font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .summary-line.total { margin-top:7px; padding-top:15px; border-top:1px solid rgba(255,255,255,.25); color:#fff; font-size:1.06rem; }
+    .summary-line.total strong { font-size:1.25rem; color:#a9f0ce; }
+    .summary-line.alert { margin-top:7px; padding-top:15px; border-top:1px solid rgba(255,255,255,.25); color:#fff; }
+    .summary-line.alert strong { color:#a9f0ce; }
+    .summary-line.alert.over-budget strong { color:#ffaaa3; }
+    .note { margin:16px 2px 0; color:var(--muted); font-size:.85rem; line-height:1.6; }
+    @media (max-width:620px) {
+      .labels { display:none; }
+      .expense-row { grid-template-columns:1fr 44px; gap:8px; padding:14px 0; }
+      .expense-row::before { content:"未含服務費"; grid-column:1 / -1; color:var(--muted); font-size:.82rem; }
+      .amount { grid-column:1 / -1; justify-content:flex-start; min-height:auto; display:block; padding:3px 0; font-size:.9rem; }
+      .amount::before { display:block; margin-bottom:3px; color:var(--muted); font-size:.75rem; }
+      .fee::before { content:"服務費金額"; }
+      .with-fee::before { content:"含服務費"; }
+      .delete { grid-column:2; grid-row:2; align-self:center; }
+      .settings { grid-template-columns:1fr; gap:12px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="card" aria-labelledby="page-title">
+      <header>
+        <h1 id="page-title">聚餐費用規劃</h1>
+        <p>輸入各筆餐費，並設定整筆訂單的服務費比例與用餐人數。</p>
+      </header>
+      <div class="content">
+        <section class="settings" aria-label="聚餐設定">
+          <label class="setting-label" for="service-rate">服務費比例（%）
+            <input id="service-rate" type="number" min="0" step="0.1" inputmode="decimal" value="10" aria-label="服務費比例（百分比）">
+          </label>
+          <label class="setting-label" for="people-count">聚餐人數
+            <input id="people-count" type="number" min="0" step="1" inputmode="numeric" value="0" aria-label="聚餐人數">
+          </label>
+        </section>
+        <div class="labels" aria-hidden="true"><span>未含服務費</span><span>服務費金額</span><span>含服務費</span><span></span></div>
+        <div id="expense-list"></div>
+        <button class="add" id="add-row" type="button">＋ 新增一筆費用</button>
+        <section class="summary" aria-live="polite" aria-label="費用總計">
+          <h2>費用總計</h2>
+          <p class="subsidy-note">每人補助上限 NT$2,000</p>
+          <div class="summary-line"><span>總補助上限</span><strong id="subsidy-total">NT$0</strong></div>
+          <div class="summary-line"><span>未含服務費總額</span><strong id="subtotal">NT$0</strong></div>
+          <div class="summary-line"><span>服務費總額</span><strong id="fee-total">NT$0</strong></div>
+          <div class="summary-line total"><span>含服務費總額</span><strong id="grand-total">NT$0</strong></div>
+          <div class="summary-line alert" id="budget-alert"><span>告警</span><strong id="budget-message">尚餘 NT$0</strong></div>
+        </section>
+        <p class="note">金額僅在此瀏覽器頁面中即時計算，關閉或重新整理頁面後不會保留。</p>
+      </div>
+    </section>
+  </main>
+  <template id="row-template">
+    <div class="expense-row">
+      <input class="base" type="number" min="0" step="1" inputmode="decimal" placeholder="例如：2,500" aria-label="未含服務費金額">
+      <output class="amount fee">NT$0</output>
+      <output class="amount with-fee">NT$0</output>
+      <button class="delete" type="button" aria-label="刪除這筆費用" title="刪除這筆費用">×</button>
+    </div>
+  </template>
+  <script>
+    const list = document.querySelector('#expense-list');
+    const peopleCount = document.querySelector('#people-count');
+    const serviceRate = document.querySelector('#service-rate');
+    const subsidyPerPerson = 2000;
+    const formatter = new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', maximumFractionDigits: 0 });
+    const money = value => formatter.format(Math.round(value));
+    const update = () => {
+      let subtotal = 0;
+      let feeTotal = 0;
+      const rate = Math.max(0, Number(serviceRate.value) || 0);
+      list.querySelectorAll('.expense-row').forEach(row => {
+        const base = Math.max(0, Number(row.querySelector('.base').value) || 0);
+        const fee = base * rate / 100;
+        subtotal += base;
+        feeTotal += fee;
+        row.querySelector('.fee').value = money(fee);
+        row.querySelector('.with-fee').value = money(base + fee);
+      });
+      const grandTotal = subtotal + feeTotal;
+      const subsidyTotal = Math.max(0, Number(peopleCount.value) || 0) * subsidyPerPerson;
+      const balance = subsidyTotal - grandTotal;
+      document.querySelector('#subtotal').textContent = money(subtotal);
+      document.querySelector('#fee-total').textContent = money(feeTotal);
+      document.querySelector('#grand-total').textContent = money(grandTotal);
+      document.querySelector('#subsidy-total').textContent = money(subsidyTotal);
+      const alert = document.querySelector('#budget-alert');
+      const message = document.querySelector('#budget-message');
+      alert.classList.toggle('over-budget', balance < 0);
+      message.textContent = balance < 0 ? `超出預算 ${money(Math.abs(balance))}` : `尚餘 ${money(balance)}`;
+    };
+    const addRow = (focus = true) => {
+      const row = document.querySelector('#row-template').content.firstElementChild.cloneNode(true);
+      row.querySelector('.base').addEventListener('input', update);
+      row.querySelector('.delete').addEventListener('click', () => { row.remove(); update(); });
+      list.append(row);
+      if (focus) row.querySelector('.base').focus();
+      update();
+    };
+    document.querySelector('#add-row').addEventListener('click', () => addRow());
+    serviceRate.addEventListener('input', update);
+    peopleCount.addEventListener('input', update);
+    addRow(false);
+  </script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>交貨便代碼 QR Code 批次工具</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="input-panel" aria-labelledby="page-title">
+        <div class="brand-mark" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+
+        <p class="eyebrow">7-11 代碼寄件輔助</p>
+        <h1 id="page-title">批次產生交貨便代碼 QR Code</h1>
+        <p class="lead">把所有代碼貼上來，每一行一個代碼。產生後畫面一次只顯示一張 QR Code，方便用 App 逐張掃描。</p>
+
+        <form class="code-form" id="codeForm">
+          <label for="codeInput">交貨便代碼</label>
+          <textarea
+            id="codeInput"
+            name="codeInput"
+            rows="12"
+            placeholder="例如：&#10;A12345678901&#10;B12345678902&#10;C12345678903"
+            spellcheck="false"
+          ></textarea>
+
+          <div class="form-actions">
+            <button type="submit">產生 QR Code</button>
+            <button class="ghost-button" type="button" id="sampleButton">填入範例</button>
+            <button class="ghost-button" type="button" id="clearButton">清除</button>
+          </div>
+        </form>
+
+        <p class="privacy-note">代碼只會留在這個瀏覽器頁面中產生 QR Code，不會送到 Google 試算表或其他資料庫。</p>
+      </section>
+
+      <section class="qr-panel" aria-labelledby="qr-title">
+        <div class="empty-state" id="emptyState">
+          <div class="scan-frame" aria-hidden="true"></div>
+          <h2 id="qr-title">尚未產生 QR Code</h2>
+          <p>貼上代碼後按下產生，這裡會顯示第一張。</p>
+        </div>
+
+        <article class="qr-viewer" id="qrViewer" hidden>
+          <div class="viewer-topline">
+            <p class="counter" id="counter">第 1 / 1 張</p>
+            <p class="batch-note" id="batchNote">可逐張掃描</p>
+          </div>
+
+          <div class="qr-stage">
+            <canvas id="qrCanvas" width="420" height="420" aria-label="目前代碼的 QR Code"></canvas>
+          </div>
+
+          <div class="current-code" id="currentCode"></div>
+
+          <div class="nav-actions" aria-label="QR Code 切換">
+            <button class="nav-button" type="button" id="prevButton">上一張</button>
+            <button class="nav-button primary" type="button" id="nextButton">下一張</button>
+          </div>
+
+          <div class="utility-actions">
+            <button class="ghost-button" type="button" id="copyButton">複製目前代碼</button>
+            <button class="ghost-button" type="button" id="downloadButton">下載這張 QR Code</button>
+          </div>
+        </article>
+
+        <p class="status" id="status" role="status" aria-live="polite"></p>
+      </section>
+    </main>
+
+    <script src="./qr-lite.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
