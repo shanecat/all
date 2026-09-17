@@ -3,17 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>商品快速揀貨圖庫</title>
+  <title>商品揀貨圖庫</title>
   <style>
     :root {
       --primary: #ee4d2d;
-      --bg: #f6f6f8;
+      --bg: #f8fafc;
       --border: #e2e8f0;
       --text: #1e293b;
       --sub: #64748b;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background: var(--bg); color: var(--text); padding-bottom: 50px; }
+    body { background: var(--bg); color: var(--text); padding-bottom: 40px; }
 
     header {
       background: #fff;
@@ -22,14 +22,14 @@
       top: 0;
       z-index: 100;
       padding: 12px 16px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
     }
     .header-content {
       max-width: 1200px;
       margin: 0 auto;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 8px;
     }
     .title { font-size: 18px; font-weight: bold; color: var(--primary); }
     .search-bar {
@@ -43,97 +43,124 @@
     .search-bar:focus { border-color: var(--primary); }
 
     main { max-width: 1200px; margin: 16px auto; padding: 0 16px; }
-    .info-bar { margin-bottom: 12px; font-size: 13px; color: var(--sub); display: flex; justify-content: space-between; }
+    .info-bar { margin-bottom: 12px; font-size: 13px; color: var(--sub); }
     
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
       gap: 16px;
     }
     .card {
       background: #fff;
-      border-radius: 8px;
+      border-radius: 10px;
       border: 1px solid var(--border);
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      position: relative;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+      transition: transform 0.15s, box-shadow 0.15s;
     }
-    .card.picked { opacity: 0.5; background: #f1f5f9; }
-    .card.picked::after {
-      content: "✓ 已揀貨";
-      position: absolute;
-      top: 8px; right: 8px;
-      background: #10b981;
-      color: #fff;
-      font-size: 11px;
-      padding: 2px 6px;
-      border-radius: 4px;
+    .card:hover {
+      box-shadow: 0 6px 12px rgba(0,0,0,0.06);
     }
     .img-box {
-      width: 100%; height: 230px;
-      background: #f8fafc;
-      display: flex; align-items: center; justify-content: center;
+      width: 100%;
+      height: 240px;
+      background: #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: zoom-in;
     }
-    .img-box img { width: 100%; height: 100%; object-fit: cover; }
-    
-    .gallery {
-      display: flex; gap: 5px; padding: 6px; background: #f8fafc; overflow-x: auto; border-bottom: 1px solid var(--border);
-    }
-    .thumb {
-      width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 2px solid transparent; cursor: pointer; flex-shrink: 0;
-    }
-    .thumb.active { border-color: var(--primary); }
-
-    .content { padding: 10px 12px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
-    .variation {
-      font-size: 12px; font-weight: bold; color: var(--primary);
-      background: #fff1ee; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-bottom: 6px;
-    }
-    .prod-name { font-size: 13px; line-height: 1.4; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-    .footer { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
-    .price { font-size: 16px; font-weight: bold; color: var(--primary); }
-    .stock { font-size: 12px; color: var(--sub); }
-
-    .btn-pick {
-      margin-top: 8px; width: 100%; padding: 6px;
-      background: #fff; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; cursor: pointer;
+    .img-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
 
-    /* 燈箱 */
+    .content {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .variation-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.4;
+    }
+    .clean-name {
+      font-size: 13px;
+      color: var(--sub);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .price-row {
+      margin-top: 4px;
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--primary);
+    }
+    .price-row small {
+      font-size: 13px;
+      font-weight: 600;
+      margin-right: 2px;
+    }
+
+    /* 點擊放大燈箱 */
     .lightbox {
-      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 999;
-      align-items: center; justify-content: center;
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 999;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
     }
     .lightbox.active { display: flex; }
-    .lightbox img { max-width: 90vw; max-height: 85vh; object-fit: contain; }
+    .lightbox img {
+      max-width: 92vw;
+      max-height: 88vh;
+      object-fit: contain;
+      border-radius: 6px;
+    }
   </style>
 </head>
 <body>
 
   <header>
     <div class="header-content">
-      <div class="title">🌿 蝦皮商品揀貨圖庫</div>
-      <input type="text" id="searchInput" class="search-bar" placeholder="🔍 輸入植物/規格關鍵字模糊搜尋（例如：座美人、子蛋、小精靈）...">
+      <div class="title">🌿 快速揀貨圖庫</div>
+      <input type="text" id="searchInput" class="search-bar" placeholder="🔍 搜尋植物或規格關鍵字（例如：座美人、子蛋、小精靈）...">
     </div>
   </header>
 
   <main>
-    <div class="info-bar">
-      <span id="countText">載入中...</span>
-      <span id="pickedText"></span>
-    </div>
+    <div class="info-bar" id="countText">載入中...</div>
     <div id="productGrid" class="grid"></div>
   </main>
 
   <div id="lightbox" class="lightbox" onclick="this.classList.remove('active')">
-    <img id="lightboxImg" src="">
+    <img id="lightboxImg" src="" alt="放大檢視">
   </div>
 
   <script>
     let products = [];
-    const picked = new Set();
+
+    // 自動清洗冗長標題，只保留核心品名
+    function cleanTitle(rawName) {
+      if (!rawName) return '';
+      // 提取 「...」 內的品名
+      const match = rawName.match(/「(.*?)」/);
+      if (match && match[1]) {
+        return match[1].trim();
+      }
+      // 若沒有引號，去除幸福貓與括號後的行銷文字
+      return rawName.replace(/^幸福貓\s*/, '').replace(/（.*$/, '').replace(/\(新手.*$/, '').trim();
+    }
 
     fetch('products.json')
       .then(res => res.json())
@@ -142,7 +169,7 @@
         render();
       })
       .catch(err => {
-        document.getElementById('countText').textContent = '載入資料失敗，請確認 products.json 是否存在。';
+        document.getElementById('countText').textContent = '無法載入 products.json，請確認檔案路徑是否正確。';
       });
 
     document.getElementById('searchInput').addEventListener('input', render);
@@ -150,75 +177,47 @@
     function render() {
       const q = document.getElementById('searchInput').value.trim().toLowerCase();
       const terms = q ? q.split(/\s+/) : [];
+      
       const list = products.filter(p => {
         if (!terms.length) return true;
-        const text = (p.name + " " + p.variation).toLowerCase();
-        return terms.every(t => text.includes(t));
+        const searchTarget = `${p.name} ${p.variation}`.toLowerCase();
+        return terms.every(t => searchTarget.includes(t));
       });
 
-      document.getElementById('countText').textContent = `共顯示 ${list.length} 個品項`;
+      document.getElementById('countText').textContent = `共 ${list.length} 個品項`;
       const grid = document.getElementById('productGrid');
       grid.innerHTML = '';
 
       list.forEach(p => {
         const card = document.createElement('div');
-        card.className = `card ${picked.has(p.id) ? 'picked' : ''}`;
-        card.id = `card-${p.id}`;
+        card.className = 'card';
 
-        const thumbs = (p.gallery && p.gallery.length > 1) ? `
-          <div class="gallery">
-            ${p.gallery.map(url => `
-              <img src="${url}" class="thumb ${url === p.cover ? 'active' : ''}" 
-                   onclick="switchImg('${p.id}', '${url}', this)">
-            `).join('')}
-          </div>
-        ` : '';
+        const shortName = cleanTitle(p.name);
 
         card.innerHTML = `
           <div class="img-box" onclick="zoom('${p.cover}')">
-            <img src="${p.cover || ''}" id="img-${p.id}" loading="lazy" onerror="this.style.display='none'">
+            <img src="${p.cover || ''}" loading="lazy" alt="${p.variation}" onerror="this.style.display='none'">
           </div>
-          ${thumbs}
           <div class="content">
-            <div>
-              <div class="variation">${p.variation}</div>
-              <div class="prod-name" title="${p.name}">${p.name}</div>
-            </div>
-            <div>
-              <div class="footer">
-                <span class="price">$${p.price}</span>
-                <span class="stock">庫存: ${p.stock}</span>
-              </div>
-              <button class="btn-pick" onclick="togglePick('${p.id}')">
-                ${picked.has(p.id) ? '取消標記' : '標記已揀'}
-              </button>
-            </div>
+            <div class="variation-name">${escapeHtml(p.variation)}</div>
+            ${shortName ? `<div class="clean-name">${escapeHtml(shortName)}</div>` : ''}
+            <div class="price-row"><small>$</small>${p.price}</div>
           </div>
         `;
         grid.appendChild(card);
       });
     }
 
-    function switchImg(id, url, el) {
-      const img = document.getElementById(`img-${id}`);
-      if (img) {
-        img.src = url;
-        img.parentElement.setAttribute('onclick', `zoom('${url}')`);
-      }
-      el.parentElement.querySelectorAll('.thumb').forEach(t => t.classList.remove('active'));
-      el.classList.add('active');
-    }
-
-    function togglePick(id) {
-      if (picked.has(id)) picked.delete(id);
-      else picked.add(id);
-      render();
-    }
-
     function zoom(url) {
       if (!url) return;
       document.getElementById('lightboxImg').src = url;
       document.getElementById('lightbox').classList.add('active');
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[m]));
     }
   </script>
 </body>
