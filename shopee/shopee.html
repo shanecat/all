@@ -31,7 +31,22 @@
       flex-direction: column;
       gap: 8px;
     }
+    .title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
     .title { font-size: 18px; font-weight: bold; color: var(--primary); }
+    .update-badge {
+      font-size: 12px;
+      color: #475569;
+      background: #f1f5f9;
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
     .search-bar {
       width: 100%;
       padding: 10px 14px;
@@ -133,7 +148,10 @@
 
   <header>
     <div class="header-content">
-      <div class="title">🌿 快速揀貨圖庫</div>
+      <div class="title-row">
+        <div class="title">🌿 快速揀貨圖庫</div>
+        <div class="update-badge" id="updateBadge">最後更新：載入中...</div>
+      </div>
       <input type="text" id="searchInput" class="search-bar" placeholder="🔍 搜尋植物或規格關鍵字（例如：座美人、子蛋、小精靈）...">
     </div>
   </header>
@@ -153,23 +171,29 @@
     // 自動清洗冗長標題，只保留核心品名
     function cleanTitle(rawName) {
       if (!rawName) return '';
-      // 提取 「...」 內的品名
       const match = rawName.match(/「(.*?)」/);
       if (match && match[1]) {
         return match[1].trim();
       }
-      // 若沒有引號，去除幸福貓與括號後的行銷文字
       return rawName.replace(/^幸福貓\s*/, '').replace(/（.*$/, '').replace(/\(新手.*$/, '').trim();
     }
 
     fetch('products.json')
       .then(res => res.json())
       .then(data => {
-        products = data;
+        // 相容新版結構 { updatedAt, items } 與純陣列格式
+        if (Array.isArray(data)) {
+          products = data;
+          document.getElementById('updateBadge').textContent = '最後更新：--';
+        } else {
+          products = data.items || [];
+          document.getElementById('updateBadge').textContent = `最後更新：${data.updatedAt || '--'}`;
+        }
         render();
       })
       .catch(err => {
         document.getElementById('countText').textContent = '無法載入 products.json，請確認檔案路徑是否正確。';
+        document.getElementById('updateBadge').textContent = '最後更新：讀取失敗';
       });
 
     document.getElementById('searchInput').addEventListener('input', render);
