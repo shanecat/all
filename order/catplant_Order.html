@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>訂單檢貨管理系統</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .locked-card {
+      background-color: #f1f5f9 !important; /* 淺灰色 */
+      border-color: #cbd5e1 !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 pb-20">
+
+  <!-- 頂部固定欄位：頁籤選擇與狀態 -->
+  <header class="sticky top-0 z-30 bg-white border-b border-slate-200 px-4 py-3 shadow-sm">
+    <div class="flex items-center gap-2">
+      <!-- 頁籤選擇下拉選單 -->
+      <select id="sheetSelect" onchange="onSheetSelectChange()" class="flex-1 bg-slate-50 border border-slate-300 text-slate-800 text-sm rounded-lg p-2 font-medium focus:ring-blue-500 focus:border-blue-500">
+        <option value="">載入頁籤清單中...</option>
+      </select>
+      
+      <!-- 手動輸入按鈕 -->
+      <button onclick="promptCustomSheet()" class="px-3 py-2 text-xs bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 active:scale-95">
+        輸入名稱
+      </button>
+
+      <!-- 重新整理按鈕 -->
+      <button onclick="loadOrders()" class="p-2 bg-blue-600 text-white rounded-lg active:scale-95">
+        🔄
+      </button>
+    </div>
+
+    <!-- 狀態列 -->
+    <div class="flex items-center justify-between mt-2 text-xs text-slate-500">
+      <span id="currentSheetLabel">當前頁籤：--</span>
+      <span id="syncStatus">就緒</span>
+    </div>
+  </header>
+
+  <!-- 訂單卡片清單容器 -->
+  <main id="cardContainer" class="p-4 space-y-4">
+    <div class="text-center text-sm text-slate-400 py-10">載入中...</div>
+  </main>
+
+  <script>
+    // 部署後的 GAS Web App URL
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbwf1WQQfoq1hZ1_Gegwp52gK_BdnJFDr_B9ciuSI_4yL8B5jx0J42U-kxdxYhg4DuXELQ/exec";
+    let currentSheet = localStorage.getItem("last_active_sheet") || "";
+    let ordersData = [];
+    let lockedOrders = JSON.parse(localStorage.getItem("locked_orders") || "{}"); // 儲存鎖定狀態
+
+    // 初始化載入
+    window.onload = async () => {
+      await fetchSheetList();
+      await loadOrders();
+    };
+
+    // 1. 撈取所有頁籤清單
+    async function fetchSheetList() {
+      try {
+        const res = await fetch(`${GAS_URL}?action=getSheets`);
+        const json = await res.json();
+        if (json.status === "success" && json.sheets.length > 0) {
+          const select = document.getElementById("sheetSelect");
+          select.innerHTML = "";
+          json.sheets.forEach(name => {
+            const opt = document.createElement("option");
+            opt.value = name;
+            opt.innerText = name;
+            select.appendChild(opt);
+          });
+
+          // 若已有紀錄則優先切換
+          if (!currentSheet || !json.sheets.includes(currentSheet)) {
+            currentSheet = json.sheets[0];
+          }
+          select.value = currentSheet;
+          updateHeaderLabel();
+        }
+      } catch (e) {
+        console.error("無法取得頁籤清單:", e);
+      }
+    }
+
+    // 下拉選單切換
+    function onSheetSelectChange() {
+      const select = document.getElementById("sheetSelect");
+      currentSheet = select.value;
+      localStorage.setItem("last_active_sheet", currentSheet);
+      updateHeaderLabel();
+      loadOrders();
+    }
+
+    // 手動輸入頁籤名稱
+    function promptCustomSheet() {
+      const name = prompt("請輸入欲載入的工作表頁籤名稱：", currentSheet);
+      if (name && name.trim()) {
+        currentSheet = name.trim();
+        localStorage.setItem("last_active_sheet", currentSheet);
+        
+        // 若下拉選單沒有此選項則自動新增
+        const select = document.getElementById("sheetSelect");
+        let exists = Array.from(select.options).some(opt => opt.value === currentSheet);
+        if (!exists) {
+          const opt = document.createElement("option");
+          opt.value = currentSheet;
+          opt.innerText = currentSheet;
+          select.appendChild(opt);
+        }
+        select.value = currentSheet;
+
+        updateHeaderLabel();
+        loadOrders();
+      }
+    }
+
+    function updateHeaderLabel() {
+      document.getElementById("currentSheetLabel").innerText = `當前頁籤：${currentSheet}`;
+    }
+
+    // 2. 載入該頁籤所有訂單資料
+    async function loadOrders() {
+      const status = document.getElementById("syncStatus");
+      const container = document.getElementById("cardContainer");
+      status.innerText = "載入資料中...";
+
+      try {
+        const res = await fetch(`${GAS_URL}?sheetName=${encodeURIComponent(currentSheet)}`);
+        const json = await res.json();
+
+        if (json.status === "success") {
+          ordersData = json.data;
+          renderCards();
+          status.innerText = `已同步 (${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})`;
+        } else {
+          container.innerHTML = `<div class="text-center text-red-500 py-10">${json.message}</div>`;
+          status.innerText = "載入失敗";
+        }
+      } catch (err) {
+        status.innerText = "網路異常";
+      }
+    }
+
+    // 3. 渲染訂單卡片
+    function renderCards() {
+      const container = document.getElementById("cardContainer");
+      if (ordersData.length === 0) {
+        container.innerHTML = `<div class="text-center text-slate-400 py-10">此頁籤目前沒有訂單資料</div>`;
+        return;
+      }
+
+      container.innerHTML = ordersData.map(order => {
+        const lockKey = `${currentSheet}_row_${order.rowIndex}`;
+        const isLocked = !!lockedOrders[lockKey];
+
+        return `
+          <div class="border rounded-2xl p-4 shadow-sm transition-colors ${isLocked ? 'locked-card border-slate-300' : 'bg-white border-slate-200'}">
+            <!-- 頂部：序號、FB 名稱、鎖定按鈕 -->
+            <div class="flex items-center justify-between border-b pb-2 mb-3 border-slate-200">
+              <div class="flex items-center gap-2">
+                <span class="bg-slate-800 text-white text-xs px-2 py-0.5 rounded font-mono font-bold">#${order.orderSeq || order.rowIndex}</span>
+                <span class="font-bold text-base text-slate-900">${order.fbName || "無FB名稱"}</span>
+              </div>
+              <button onclick="toggleLock('${lockKey}')" class="px-2.5 py-1 text-xs font-medium rounded-lg flex items-center gap-1 ${isLocked ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}">
+                ${isLocked ? '🔒 已完工鎖定' : '🔓 點擊鎖定'}
+              </button>
+            </div>
+
+            <!-- E 欄位：編號輸入 -->
+            <div class="mb-3 flex items-center gap-2">
+              <span class="text-xs text-slate-500 font-medium">編號(E)：</span>
+              <input type="text" value="${order.orderNo}" ${isLocked ? 'disabled' : ''} 
+                onchange="updateCell(${order.rowIndex}, 5, this.value)"
+                class="border border-slate-300 rounded px-2 py-1 text-sm flex-1 ${isLocked ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : 'bg-white'}">
+            </div>
+
+            <!-- 操作勾選 (B: 拿取 / C: 寄出) -->
+            <div class="grid grid-cols-2 gap-2 mb-3">
+              <button onclick="toggleCheckbox(${order.rowIndex}, 2, ${!order.picked})" ${isLocked ? 'disabled' : ''}
+                class="py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all ${
+                  isLocked ? 'bg-slate-200 text-slate-400 cursor-not-allowed' :
+                  order.picked ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700 border border-slate-300'
+                }">
+                <span>${order.picked ? '✓' : '○'}</span> 拿取商品 (B)
+              </button>
+
+              <button onclick="toggleCheckbox(${order.rowIndex}, 3, ${!order.shipped})" ${isLocked ? 'disabled' : ''}
+                class="py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all ${
+                  isLocked ? 'bg-slate-200 text-slate-400 cursor-not-allowed' :
+                  order.shipped ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 border border-slate-300'
+                }">
+                <span>${order.shipped ? '✓' : '○'}</span> 包裝寄出 (C)
+              </button>
+            </div>
+
+            <!-- P 欄：訂單內容放大區 -->
+            <div class="bg-amber-50/60 border border-amber-200 rounded-xl p-3 mb-3">
+              <div class="flex justify-between items-center mb-1 text-xs text-amber-800 font-bold">
+                <span>📦 訂單明細 (P欄)</span>
+                <button onclick="copyText('${encodeURIComponent(order.items)}')" class="text-blue-600 hover:underline">複製內容</button>
+              </div>
+              <div class="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed font-sans">${order.items || "（無內容）"}</div>
+            </div>
+
+            <!-- 底部：收件人、電話、店到店與物流單號 (I欄) -->
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs text-slate-600 space-y-1.5">
+              <div class="flex justify-between items-center">
+                <span>👤 姓名：<strong class="text-slate-900">${order.name || "-"}</strong></span>
+                <span>📞 電話：${order.phone ? `<a href="tel:${order.phone}" class="text-blue-600 underline">${order.phone}</a>` : "-"}</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span>🏪 門市：${order.storeName || "-"} (${order.storeCode || "-"})</span>
+                <span>💰 匯款：${order.payment || "-"}</span>
+              </div>
+              <div class="pt-1 border-t border-slate-200 flex justify-between items-center font-mono">
+                <span>🚚 物流單號(I)：<strong class="text-slate-900">${order.trackingNo || "-"}</strong></span>
+                ${order.trackingNo ? `<button onclick="copyText('${order.trackingNo}')" class="text-blue-600 hover:underline">複製單號</button>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    // 4. 更新儲存格 API
+    async function updateCell(row, col, value) {
+      const status = document.getElementById("syncStatus");
+      status.innerText = "同步中...";
+      try {
+        const res = await fetch(GAS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ sheetName: currentSheet, row, col, value })
+        });
+        const json = await res.json();
+        if (json.status === "success") {
+          status.innerText = "已更新";
+        } else {
+          alert("更新失敗：" + json.message);
+        }
+      } catch (e) {
+        alert("連線異常，請檢查網路");
+      }
+    }
+
+    function toggleCheckbox(row, col, newVal) {
+      updateCell(row, col, newVal);
+      // 樂觀更新前端畫面
+      const order = ordersData.find(o => o.rowIndex === row);
+      if (order) {
+        if (col === 2) order.picked = newVal;
+        if (col === 3) order.shipped = newVal;
+        renderCards();
+      }
+    }
+
+    // 切換完工鎖定狀態
+    function toggleLock(lockKey) {
+      lockedOrders[lockKey] = !lockedOrders[lockKey];
+      localStorage.setItem("locked_orders", JSON.stringify(lockedOrders));
+      renderCards();
+    }
+
+    function copyText(val) {
+      navigator.clipboard.writeText(decodeURIComponent(val));
+      alert("已複製到剪貼簿！");
+    }
+  </script>
+</body>
+</html>
