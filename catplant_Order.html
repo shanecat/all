@@ -8,12 +8,12 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { 
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; 
-      background-color: #e2e8f0; /* 底色稍微加深，凸顯白色卡片 */
+      background-color: #e2e8f0; 
       color: #0f172a; 
       padding-bottom: 90px; 
     }
 
-    /* 密碼驗證遮罩（純原生置頂彈窗） */
+    /* 密碼驗證遮罩 */
     #authOverlay {
       position: fixed;
       top: 0;
@@ -70,7 +70,7 @@
       top: 0;
       background: #ffffff;
       border-bottom: 2px solid #cbd5e1;
-      padding: 12px 16px;
+      padding: 12px 14px 8px 14px;
       z-index: 100;
       box-shadow: 0 2px 4px rgba(0,0,0,0.06);
     }
@@ -105,18 +105,44 @@
       border: none !important;
     }
 
-    /* 1. 訂單卡片設計：外框加粗、深邊框、明顯陰影 */
+    /* 狀態篩選頁籤 */
+    .filter-bar {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+    .filter-bar::-webkit-scrollbar { display: none; }
+    .btn-filter {
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1.5px solid #cbd5e1;
+      background: #f8fafc;
+      font-size: 13px;
+      font-weight: 600;
+      color: #475569;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .btn-filter.active {
+      background: #0f172a !important;
+      color: #ffffff !important;
+      border-color: #0f172a !important;
+    }
+
+    /* 訂單卡片設計 */
     .card {
       background: #ffffff;
-      border: 2px solid #94a3b8; /* 加粗且顏色鮮明的外框 */
+      border: 2px solid #94a3b8;
       border-radius: 18px;
       padding: 18px;
-      margin: 18px 14px;
-      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08); /* 加深陰影區隔卡片 */
+      margin: 16px 14px;
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
       position: relative;
       overflow: hidden;
     }
-    /* 卡片頂部識別標線 */
     .card::before {
       content: "";
       position: absolute;
@@ -204,7 +230,17 @@
       <button onclick="refreshData()" class="btn-tool btn-primary-tool">🔄</button>
       <button onclick="doLogout()" class="btn-tool" title="重新輸入密碼">🚪</button>
     </div>
-    <div style="display: flex; justify-content: space-between; font-size: 13px; color: #64748b; margin-top: 8px; font-weight: 500;">
+
+    <!-- 狀態篩選標籤列 -->
+    <div class="filter-bar">
+      <button id="filterBtn_pending" class="btn-filter active" onclick="setFilter('pending')">未結單 (隱藏D)</button>
+      <button id="filterBtn_all" class="btn-filter" onclick="setFilter('all')">所有訂單</button>
+      <button id="filterBtn_picked" class="btn-filter" onclick="setFilter('picked')">已拿取 (B)</button>
+      <button id="filterBtn_shipped" class="btn-filter" onclick="setFilter('shipped')">已打包 (C)</button>
+      <button id="filterBtn_checked" class="btn-filter" onclick="setFilter('checked')">已寄出 (D)</button>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; font-size: 13px; color: #64748b; margin-top: 6px; font-weight: 500;">
       <span id="txtSheetLabel">當前頁籤：--</span>
       <span id="txtSyncStatus">尚未解鎖</span>
     </div>
@@ -225,6 +261,7 @@
 
     let currentPassword = localStorage.getItem("order_auth_pwd") || "";
     let targetSheet = localStorage.getItem("order_active_sheet") || "";
+    let currentFilter = "pending"; // 預設為 pending (排除 D 欄有勾選的訂單)
     let ordersList = [];
     let lockedOrders = JSON.parse(localStorage.getItem("order_locked_cards") || "{}");
 
@@ -364,6 +401,16 @@
       loadOrderCards();
     }
 
+    // 篩選切換
+    function setFilter(type) {
+      currentFilter = type;
+      // 切換按鈕 active 樣式
+      document.querySelectorAll(".btn-filter").forEach(btn => btn.classList.remove("active"));
+      const targetBtn = document.getElementById(`filterBtn_${type}`);
+      if (targetBtn) targetBtn.classList.add("active");
+      renderList();
+    }
+
     // 撈取訂單卡片資料
     async function loadOrderCards() {
       if (!currentPassword) {
@@ -389,6 +436,7 @@
         if (json.status === "success") {
           ordersList = json.data;
           renderList();
+          updateFilterCounts();
           status.innerText = `已同步 (${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})})`;
         } else {
           container.innerHTML = `<div style="text-align: center; color: #ef4444; padding: 40px 16px;">${json.message}</div>`;
@@ -400,25 +448,54 @@
       }
     }
 
-    // 渲染卡片清單（整合第 1、2、3 點修改要求）
+    // 更新篩選標籤上的數量
+    function updateFilterCounts() {
+      const pendingCount = ordersList.filter(o => !o.checked).length;
+      const allCount = ordersList.length;
+      const pickedCount = ordersList.filter(o => o.picked).length;
+      const shippedCount = ordersList.filter(o => o.shipped).length;
+      const checkedCount = ordersList.filter(o => o.checked).length;
+
+      document.getElementById("filterBtn_pending").innerText = `未結單 (${pendingCount})`;
+      document.getElementById("filterBtn_all").innerText = `所有 (${allCount})`;
+      document.getElementById("filterBtn_picked").innerText = `已拿取 (${pickedCount})`;
+      document.getElementById("filterBtn_shipped").innerText = `已打包 (${shippedCount})`;
+      document.getElementById("filterBtn_checked").innerText = `已寄出 (${checkedCount})`;
+    }
+
+    // 渲染卡片清單
     function renderList() {
       const container = document.getElementById("cardListContainer");
-      if (ordersList.length === 0) {
-        container.innerHTML = `<div style="text-align:center; color:#64748b; padding:60px 16px; font-size:15px;">此頁籤目前無訂單資料</div>`;
+
+      // 根據篩選規則過濾訂單
+      let displayList = ordersList;
+      if (currentFilter === "pending") {
+        displayList = ordersList.filter(o => !o.checked); // 預設排除 D 欄有勾選者
+      } else if (currentFilter === "picked") {
+        displayList = ordersList.filter(o => o.picked);
+      } else if (currentFilter === "shipped") {
+        displayList = ordersList.filter(o => o.shipped);
+      } else if (currentFilter === "checked") {
+        displayList = ordersList.filter(o => o.checked);
+      }
+
+      if (displayList.length === 0) {
+        container.innerHTML = `<div style="text-align:center; color:#64748b; padding:60px 16px; font-size:15px; font-weight:bold;">此分類目前無訂單資料</div>`;
         return;
       }
 
-      container.innerHTML = ordersList.map(order => {
+      container.innerHTML = displayList.map(order => {
         const lockKey = `${targetSheet}_row_${order.rowIndex}`;
         const isLocked = !!lockedOrders[lockKey];
 
         return `
           <div class="card ${isLocked ? 'locked-card' : ''}">
-            <!-- 序號、FB名稱、完工鎖定按鈕 -->
+            <!-- 序號、FB名稱、D欄已結標籤、完工鎖定按鈕 -->
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 12px;">
-              <div style="display: flex; align-items: center;">
+              <div style="display: flex; align-items: center; gap: 6px;">
                 <span style="background: #0f172a; color: #fff; font-size: 13px; padding: 3px 8px; border-radius: 6px; font-weight: bold; font-family: monospace;">#${order.orderSeq || order.rowIndex}</span>
-                <strong style="margin-left: 8px; font-size: 17px; color: #0f172a;">${order.fbName || "無FB名稱"}</strong>
+                <strong style="font-size: 17px; color: #0f172a;">${order.fbName || "無FB名稱"}</strong>
+                ${order.checked ? '<span style="background: #dbeafe; color: #1e40af; font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: bold;">(D已寄出)</span>' : ''}
               </div>
               <button onclick="toggleCardLock('${lockKey}')" style="padding: 6px 10px; font-size: 13px; font-weight: 600; border-radius: 8px; border: 1.5px solid #cbd5e1; background: ${isLocked ? '#fef3c7' : '#ffffff'}; cursor: pointer;">
                 ${isLocked ? '🔒 已完工鎖定' : '🔓 點擊鎖定'}
@@ -445,7 +522,7 @@
               </button>
             </div>
 
-            <!-- 2. P欄 訂單明細（字體放大為 16px、加深顏色） -->
+            <!-- P欄 訂單明細 -->
             <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 14px; margin-bottom: 12px;">
               <div style="font-size: 13px; font-weight: bold; color: #92400e; margin-bottom: 8px;">
                 <span>📦 訂單明細 (P欄)</span>
@@ -454,7 +531,7 @@
               <div style="font-size: 16px; color: #000000; font-weight: 500; white-space: pre-wrap; line-height: 1.6;">${order.items || "（無明細內容）"}</div>
             </div>
 
-            <!-- 3. 底部個資與物流 (I欄)：字體全面放大 (14~15px)、排版更清晰 -->
+            <!-- 底部個資與物流 (I欄) -->
             <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 12px 14px; font-size: 14px; color: #334155; line-height: 2;">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span>👤 姓名：<strong style="color: #0f172a; font-size: 15px;">${order.name || "-"}</strong></span>
@@ -502,6 +579,7 @@
         if (col === 2) item.picked = newVal;
         if (col === 3) item.shipped = newVal;
         renderList();
+        updateFilterCounts();
       }
     }
 
