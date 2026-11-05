@@ -6,16 +6,21 @@
   <title>訂單檢貨管理系統</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; background-color: #f1f5f9; color: #1e293b; padding-bottom: 90px; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; 
+      background-color: #e2e8f0; 
+      color: #0f172a; 
+      padding-bottom: 90px; 
+    }
 
-    /* 密碼驗證遮罩（純原生置頂彈窗） */
+    /* 密碼驗證遮罩 */
     #authOverlay {
       position: fixed;
       top: 0;
       left: 0;
       width: 100vw;
       height: 100vh;
-      background-color: rgba(15, 23, 42, 0.85);
+      background-color: rgba(15, 23, 42, 0.88);
       z-index: 99999;
       display: none;
       align-items: center;
@@ -26,15 +31,15 @@
       background: #ffffff;
       width: 100%;
       max-width: 360px;
-      border-radius: 16px;
-      padding: 24px;
+      border-radius: 18px;
+      padding: 26px;
       text-align: center;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
     }
     .modal-box input[type="password"] {
       width: 100%;
       padding: 12px;
-      border: 1px solid #cbd5e1;
+      border: 2px solid #cbd5e1;
       border-radius: 10px;
       font-size: 18px;
       text-align: center;
@@ -42,14 +47,17 @@
       margin-top: 14px;
       outline: none;
     }
+    .modal-box input[type="password"]:focus {
+      border-color: #2563eb;
+    }
     .btn-submit {
       width: 100%;
       background-color: #2563eb;
       color: #ffffff;
-      padding: 12px;
+      padding: 13px;
       border: none;
       border-radius: 10px;
-      font-size: 15px;
+      font-size: 16px;
       font-weight: bold;
       margin-top: 14px;
       cursor: pointer;
@@ -61,10 +69,10 @@
       position: sticky;
       top: 0;
       background: #ffffff;
-      border-bottom: 1px solid #e2e8f0;
-      padding: 10px 14px;
+      border-bottom: 2px solid #cbd5e1;
+      padding: 12px 14px 8px 14px;
       z-index: 100;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.06);
     }
     .header-controls {
       display: flex;
@@ -73,20 +81,21 @@
     }
     .sheet-select {
       flex: 1;
-      padding: 8px 10px;
+      padding: 9px 12px;
       border-radius: 8px;
-      border: 1px solid #cbd5e1;
-      font-size: 14px;
+      border: 1.5px solid #94a3b8;
+      font-size: 15px;
       background: #f8fafc;
-      font-weight: 500;
+      font-weight: 600;
       outline: none;
     }
     .btn-tool {
-      padding: 8px 12px;
+      padding: 9px 12px;
       border-radius: 8px;
-      border: 1px solid #cbd5e1;
+      border: 1.5px solid #cbd5e1;
       background: #ffffff;
-      font-size: 13px;
+      font-size: 14px;
+      font-weight: 600;
       cursor: pointer;
     }
     .btn-tool:active { background: #e2e8f0; }
@@ -96,50 +105,101 @@
       border: none !important;
     }
 
+    /* 狀態篩選頁籤 */
+    .filter-bar {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      scrollbar-width: none;
+    }
+    .filter-bar::-webkit-scrollbar { display: none; }
+    .btn-filter {
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1.5px solid #cbd5e1;
+      background: #f8fafc;
+      font-size: 13px;
+      font-weight: 600;
+      color: #475569;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .btn-filter.active {
+      background: #0f172a !important;
+      color: #ffffff !important;
+      border-color: #0f172a !important;
+    }
+
     /* 訂單卡片設計 */
     .card {
       background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 14px;
-      padding: 16px;
-      margin: 14px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-      transition: background-color 0.2s;
+      border: 2px solid #94a3b8;
+      border-radius: 18px;
+      padding: 18px;
+      margin: 16px 14px;
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+      position: relative;
+      overflow: hidden;
     }
+    .card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: #3b82f6;
+    }
+
     /* 完工淺灰鎖定樣式 */
     .locked-card {
-      background-color: #e2e8f0 !important;
-      border-color: #cbd5e1 !important;
+      background-color: #f1f5f9 !important;
+      border: 2px solid #cbd5e1 !important;
+      opacity: 0.9;
+    }
+    .locked-card::before {
+      background: #94a3b8 !important;
     }
 
     /* 勾選大按鈕 */
     .btn-check-group {
       display: flex;
-      gap: 8px;
-      margin-bottom: 10px;
+      gap: 10px;
+      margin-bottom: 14px;
     }
     .btn-check {
       flex: 1;
-      padding: 10px;
-      border-radius: 8px;
-      border: 1px solid #cbd5e1;
+      padding: 12px 8px;
+      border-radius: 10px;
+      border: 2px solid #cbd5e1;
       font-weight: bold;
-      font-size: 13px;
+      font-size: 15px;
       cursor: pointer;
       background: #f8fafc;
       color: #334155;
     }
     .btn-check:active { transform: scale(0.98); }
-    .btn-active-pick { background: #059669 !important; color: #fff !important; border-color: #059669 !important; }
-    .btn-active-ship { background: #2563eb !important; color: #fff !important; border-color: #2563eb !important; }
+    .btn-active-pick { 
+      background: #059669 !important; 
+      color: #ffffff !important; 
+      border-color: #047857 !important; 
+    }
+    .btn-active-ship { 
+      background: #2563eb !important; 
+      color: #ffffff !important; 
+      border-color: #1d4ed8 !important; 
+    }
 
-    /* 複製按鈕提示文字 */
+    /* 複製按鈕 */
     .copy-btn {
       color: #2563eb;
-      font-size: 12px;
+      font-size: 13px;
       cursor: pointer;
       text-decoration: underline;
       float: right;
+      font-weight: normal;
     }
   </style>
 </head>
@@ -148,9 +208,9 @@
   <!-- 🔒 密碼驗證視窗 -->
   <div id="authOverlay">
     <div class="modal-box">
-      <div style="font-size: 36px; margin-bottom: 8px;">🔒</div>
-      <h3 style="font-size: 18px; font-weight: bold; color: #0f172a;">訂單管理系統驗證</h3>
-      <p style="font-size: 12px; color: #64748b; margin-top: 4px;">本頁面包含買家個資，請輸入存取密碼</p>
+      <div style="font-size: 38px; margin-bottom: 8px;">🔒</div>
+      <h3 style="font-size: 19px; font-weight: bold; color: #0f172a;">訂單管理系統驗證</h3>
+      <p style="font-size: 13px; color: #64748b; margin-top: 4px;">本頁面包含買家個資，請輸入存取密碼</p>
       
       <form onsubmit="handleAuthSubmit(event)">
         <input type="password" id="inputPwd" placeholder="請輸入密碼" required autofocus>
@@ -170,7 +230,17 @@
       <button onclick="refreshData()" class="btn-tool btn-primary-tool">🔄</button>
       <button onclick="doLogout()" class="btn-tool" title="重新輸入密碼">🚪</button>
     </div>
-    <div style="display: flex; justify-content: space-between; font-size: 12px; color: #64748b; margin-top: 8px;">
+
+    <!-- 狀態篩選標籤列 -->
+    <div class="filter-bar">
+      <button id="filterBtn_pending" class="btn-filter active" onclick="setFilter('pending')">未結單 (隱藏D)</button>
+      <button id="filterBtn_all" class="btn-filter" onclick="setFilter('all')">所有訂單</button>
+      <button id="filterBtn_picked" class="btn-filter" onclick="setFilter('picked')">已拿取 (B)</button>
+      <button id="filterBtn_shipped" class="btn-filter" onclick="setFilter('shipped')">已打包 (C)</button>
+      <button id="filterBtn_checked" class="btn-filter" onclick="setFilter('checked')">已寄出 (D)</button>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; font-size: 13px; color: #64748b; margin-top: 6px; font-weight: 500;">
       <span id="txtSheetLabel">當前頁籤：--</span>
       <span id="txtSyncStatus">尚未解鎖</span>
     </div>
@@ -178,7 +248,7 @@
 
   <!-- 卡片清單區塊 -->
   <div id="cardListContainer">
-    <div id="emptyNotice" style="text-align: center; color: #94a3b8; padding: 50px 16px; font-size: 14px;">
+    <div id="emptyNotice" style="text-align: center; color: #64748b; padding: 60px 16px; font-size: 15px; font-weight: bold;">
       載入中，請稍候...
     </div>
   </div>
@@ -191,6 +261,7 @@
 
     let currentPassword = localStorage.getItem("order_auth_pwd") || "";
     let targetSheet = localStorage.getItem("order_active_sheet") || "";
+    let currentFilter = "pending"; // 預設為 pending (排除 D 欄有勾選的訂單)
     let ordersList = [];
     let lockedOrders = JSON.parse(localStorage.getItem("order_locked_cards") || "{}");
 
@@ -263,7 +334,7 @@
         currentPassword = "";
         ordersList = [];
         document.getElementById("cardListContainer").innerHTML = `
-          <div style="text-align: center; color: #94a3b8; padding: 50px 16px; font-size: 14px;">
+          <div style="text-align: center; color: #64748b; padding: 60px 16px; font-size: 15px;">
             請先輸入存取密碼以顯示訂單資料
           </div>
         `;
@@ -330,6 +401,16 @@
       loadOrderCards();
     }
 
+    // 篩選切換
+    function setFilter(type) {
+      currentFilter = type;
+      // 切換按鈕 active 樣式
+      document.querySelectorAll(".btn-filter").forEach(btn => btn.classList.remove("active"));
+      const targetBtn = document.getElementById(`filterBtn_${type}`);
+      if (targetBtn) targetBtn.classList.add("active");
+      renderList();
+    }
+
     // 撈取訂單卡片資料
     async function loadOrderCards() {
       if (!currentPassword) {
@@ -355,6 +436,7 @@
         if (json.status === "success") {
           ordersList = json.data;
           renderList();
+          updateFilterCounts();
           status.innerText = `已同步 (${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})})`;
         } else {
           container.innerHTML = `<div style="text-align: center; color: #ef4444; padding: 40px 16px;">${json.message}</div>`;
@@ -366,37 +448,66 @@
       }
     }
 
+    // 更新篩選標籤上的數量
+    function updateFilterCounts() {
+      const pendingCount = ordersList.filter(o => !o.checked).length;
+      const allCount = ordersList.length;
+      const pickedCount = ordersList.filter(o => o.picked).length;
+      const shippedCount = ordersList.filter(o => o.shipped).length;
+      const checkedCount = ordersList.filter(o => o.checked).length;
+
+      document.getElementById("filterBtn_pending").innerText = `未結單 (${pendingCount})`;
+      document.getElementById("filterBtn_all").innerText = `所有 (${allCount})`;
+      document.getElementById("filterBtn_picked").innerText = `已拿取 (${pickedCount})`;
+      document.getElementById("filterBtn_shipped").innerText = `已打包 (${shippedCount})`;
+      document.getElementById("filterBtn_checked").innerText = `已寄出 (${checkedCount})`;
+    }
+
     // 渲染卡片清單
     function renderList() {
       const container = document.getElementById("cardListContainer");
-      if (ordersList.length === 0) {
-        container.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:50px 16px;">此頁籤目前無訂單資料</div>`;
+
+      // 根據篩選規則過濾訂單
+      let displayList = ordersList;
+      if (currentFilter === "pending") {
+        displayList = ordersList.filter(o => !o.checked); // 預設排除 D 欄有勾選者
+      } else if (currentFilter === "picked") {
+        displayList = ordersList.filter(o => o.picked);
+      } else if (currentFilter === "shipped") {
+        displayList = ordersList.filter(o => o.shipped);
+      } else if (currentFilter === "checked") {
+        displayList = ordersList.filter(o => o.checked);
+      }
+
+      if (displayList.length === 0) {
+        container.innerHTML = `<div style="text-align:center; color:#64748b; padding:60px 16px; font-size:15px; font-weight:bold;">此分類目前無訂單資料</div>`;
         return;
       }
 
-      container.innerHTML = ordersList.map(order => {
+      container.innerHTML = displayList.map(order => {
         const lockKey = `${targetSheet}_row_${order.rowIndex}`;
         const isLocked = !!lockedOrders[lockKey];
 
         return `
           <div class="card ${isLocked ? 'locked-card' : ''}">
-            <!-- 序號、FB名稱、完工鎖定按鈕 -->
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px; margin-bottom: 10px;">
-              <div>
-                <span style="background: #0f172a; color: #fff; font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: bold; font-family: monospace;">#${order.orderSeq || order.rowIndex}</span>
-                <strong style="margin-left: 6px; font-size: 15px;">${order.fbName || "無FB名稱"}</strong>
+            <!-- 序號、FB名稱、D欄已結標籤、完工鎖定按鈕 -->
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="background: #0f172a; color: #fff; font-size: 13px; padding: 3px 8px; border-radius: 6px; font-weight: bold; font-family: monospace;">#${order.orderSeq || order.rowIndex}</span>
+                <strong style="font-size: 17px; color: #0f172a;">${order.fbName || "無FB名稱"}</strong>
+                ${order.checked ? '<span style="background: #dbeafe; color: #1e40af; font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: bold;">(D已寄出)</span>' : ''}
               </div>
-              <button onclick="toggleCardLock('${lockKey}')" style="padding: 4px 8px; font-size: 12px; border-radius: 6px; border: 1px solid #cbd5e1; background: ${isLocked ? '#fef3c7' : '#fff'}; cursor: pointer;">
+              <button onclick="toggleCardLock('${lockKey}')" style="padding: 6px 10px; font-size: 13px; font-weight: 600; border-radius: 8px; border: 1.5px solid #cbd5e1; background: ${isLocked ? '#fef3c7' : '#ffffff'}; cursor: pointer;">
                 ${isLocked ? '🔒 已完工鎖定' : '🔓 點擊鎖定'}
               </button>
             </div>
 
             <!-- E欄 編號 -->
-            <div style="display: flex; align-items: center; margin-bottom: 10px; font-size: 13px;">
-              <span style="color: #64748b; font-weight: 500;">編號(E)：</span>
+            <div style="display: flex; align-items: center; margin-bottom: 12px; font-size: 14px;">
+              <span style="color: #475569; font-weight: bold;">編號(E)：</span>
               <input type="text" value="${order.orderNo}" ${isLocked ? 'disabled' : ''}
                 onchange="updateCellData(${order.rowIndex}, 5, this.value)"
-                style="flex: 1; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; background: ${isLocked ? '#e2e8f0' : '#fff'};">
+                style="flex: 1; padding: 8px 10px; border: 1.5px solid #cbd5e1; border-radius: 8px; font-size: 15px; font-weight: 500; background: ${isLocked ? '#e2e8f0' : '#fff'};">
             </div>
 
             <!-- B拿取 / C寄出 大按鈕 -->
@@ -411,28 +522,28 @@
               </button>
             </div>
 
-            <!-- P欄 訂單明細（獨立放大幅面） -->
-            <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
-              <div style="font-size: 12px; font-weight: bold; color: #92400e; margin-bottom: 6px;">
+            <!-- P欄 訂單明細 -->
+            <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 14px; margin-bottom: 12px;">
+              <div style="font-size: 13px; font-weight: bold; color: #92400e; margin-bottom: 8px;">
                 <span>📦 訂單明細 (P欄)</span>
                 <span class="copy-btn" onclick="copyTextData('${encodeURIComponent(order.items)}')">複製明細</span>
               </div>
-              <div style="font-size: 13px; color: #1e293b; white-space: pre-wrap; line-height: 1.6;">${order.items || "（無明細內容）"}</div>
+              <div style="font-size: 16px; color: #000000; font-weight: 500; white-space: pre-wrap; line-height: 1.6;">${order.items || "（無明細內容）"}</div>
             </div>
 
             <!-- 底部個資與物流 (I欄) -->
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; font-size: 12px; color: #475569; line-height: 1.8;">
-              <div style="display: flex; justify-content: space-between;">
-                <span>👤 姓名：<strong style="color: #0f172a;">${order.name || "-"}</strong></span>
-                <span>📞 電話：${order.phone ? `<a href="tel:${order.phone}" style="color: #2563eb; font-weight: bold; text-decoration: none;">${order.phone}</a>` : "-"}</span>
+            <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 12px 14px; font-size: 14px; color: #334155; line-height: 2;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>👤 姓名：<strong style="color: #0f172a; font-size: 15px;">${order.name || "-"}</strong></span>
+                <span>📞 電話：${order.phone ? `<a href="tel:${order.phone}" style="color: #2563eb; font-weight: bold; font-size: 15px; text-decoration: none;">${order.phone}</a>` : "-"}</span>
               </div>
-              <div style="display: flex; justify-content: space-between;">
-                <span>🏪 門市：${order.storeName || "-"} (${order.storeCode || "-"})</span>
-                <span>💰 匯款：${order.payment || "-"}</span>
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span>🏪 門市：<strong style="color: #0f172a; font-size: 15px;">${order.storeName || "-"}</strong> <span style="font-size: 13px; color:#64748b;">(${order.storeCode || "-"})</span></span>
+                <span>💰 匯款：<strong style="color: #0f172a;">${order.payment || "-"}</strong></span>
               </div>
-              <div style="border-top: 1px solid #e2e8f0; margin-top: 6px; padding-top: 6px; display: flex; justify-content: space-between; align-items: center;">
-                <span>🚚 物流單號(I)：<strong style="color: #0f172a; font-family: monospace;">${order.trackingNo || "-"}</strong></span>
-                ${order.trackingNo ? `<span class="copy-btn" onclick="copyTextData('${order.trackingNo}')">複製單號</span>` : ''}
+              <div style="border-top: 1.5px solid #e2e8f0; margin-top: 6px; padding-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <span>🚚 物流單號(I)：<strong style="color: #0f172a; font-family: monospace; font-size: 16px; letter-spacing: 0.5px;">${order.trackingNo || "-"}</strong></span>
+                ${order.trackingNo ? `<span class="copy-btn" onclick="copyTextData('${order.trackingNo}')" style="font-size: 13px; font-weight: bold;">複製單號</span>` : ''}
               </div>
             </div>
           </div>
@@ -468,6 +579,7 @@
         if (col === 2) item.picked = newVal;
         if (col === 3) item.shipped = newVal;
         renderList();
+        updateFilterCounts();
       }
     }
 
